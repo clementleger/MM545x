@@ -20,6 +20,9 @@ MM545x::MM545x(int clock_pin, int data_pin):
         pinMode(data_pin, OUTPUT);
         digitalWrite(clock_pin, LOW);
         digitalWrite(data_pin, LOW);
+        
+        /* reset the leds */
+        setLeds((uint64_t) 0);
 }
 
 
