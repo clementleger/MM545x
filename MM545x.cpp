@@ -35,7 +35,8 @@ void MM545x::setLeds(uint64_t leds)
         digitalWrite(clock_pin, LOW);
         delayMicroseconds(CLOCK_USEC_DELAY);
         digitalWrite(clock_pin, HIGH);
-
+        
+        /* Then output the bits */
         for (i = 0; i < OUTPUT_BIT_COUNT; i++) {
                 delayMicroseconds(CLOCK_USEC_DELAY);
                 if ((leds >> i) & 0x1)
@@ -49,7 +50,4 @@ void MM545x::setLeds(uint64_t leds)
 
         delayMicroseconds(CLOCK_USEC_DELAY);
         digitalWrite(clock_pin, LOW);
-        digitalWrite(data_pin, LOW);
-        delayMicroseconds(CLOCK_USEC_DELAY);
-        digitalWrite(clock_pin, HIGH);
 }
