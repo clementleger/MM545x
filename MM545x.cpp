@@ -26,6 +26,35 @@ uint8_t digitPattern[] = {
         0x6F,     /* 9 */
 };
 
+uint8_t alphaPattern[] = {
+        0b01110111,     /* a */
+        0b01111100,     /* b */
+        0b00111001,     /* c */
+        0b01011110,     /* d */
+        0b01111001,     /* e */
+        0b01110001,     /* f */
+        0b01101111,     /* g */
+        0b01110110,     /* h */
+        0b00110000,     /* i */
+        0b00011110,     /* j */
+        0b01110110,     /* k */
+        0b00111000,     /* l */
+        0b00010101,     /* m */
+        0b01010100,     /* n */
+        0b00111111,     /* o */
+        0b01110011,     /* p */
+        0b01100111,     /* q */
+        0b01010000,     /* r */
+        0b01101101,     /* s */
+        0b01111000,     /* t */
+        0b00111110,     /* u */
+        0b00011100,     /* v */
+        0b00101010,     /* w */
+        0b01110110,     /* x */
+        0b01101110,     /* y */
+        0b01011011,     /* z */
+};
+
 
 MM545x::MM545x(int clock_pin, int data_pin):
 	clock_pin(clock_pin),
@@ -82,17 +111,20 @@ void MM545x::setupSegment(int sevSeg, uint8_t pins[SEGMENT_COUNT])
 
 void MM545x::setSegment(int sevSeg, char value)
 {
+	char val;
+
         if (value >= '0' && value <= '9') {
                 setSegmentRaw(sevSeg, digitPattern[value - '0']);
-        }
+        } else if (value >= 'a' && value <= 'z') {
+                setSegmentRaw(sevSeg, alphaPattern[value - 'a']);
+        } else if (value >= 'A' && value <= 'Z') {
+                setSegmentRaw(sevSeg, alphaPattern[value - 'A']);
+	}
+		
 }
 
 void MM545x::setSegmentRaw(int sevSeg, uint8_t segMask)
 {
-        Serial.print("Setting seg ");
-        Serial.print(sevSeg);
-        Serial.print(" to mask ");
-        Serial.println(segMask, HEX);
         sevSegValue[sevSeg] = segMask;
 }
 
