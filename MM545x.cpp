@@ -55,6 +55,12 @@ uint8_t alphaPattern[] = {
         0b01011011,     /* z */
 };
 
+#define COMMA 		0b10000000
+#define DASH 		0b01000000
+#define UNDERSCORE 	0b00001000
+#define QUOTE 		0b00100000
+#define EQUAL 		0b01001000
+
 
 MM545x::MM545x(int clock_pin, int data_pin):
 	clock_pin(clock_pin),
@@ -119,6 +125,18 @@ void MM545x::setSegment(int sevSeg, char value)
                 setSegmentRaw(sevSeg, alphaPattern[value - 'a']);
         } else if (value >= 'A' && value <= 'Z') {
                 setSegmentRaw(sevSeg, alphaPattern[value - 'A']);
+	} else if (value == ' ') {
+                setSegmentRaw(sevSeg, 0x0);
+	} else if (value == ',' || value == ';' || value == '.') {
+                setSegmentRaw(sevSeg, COMMA);
+	} else if (value == '_') {
+                setSegmentRaw(sevSeg, UNDERSCORE);
+	} else if (value == '-') {
+                setSegmentRaw(sevSeg, DASH);
+	} else if (value == '\'') {
+                setSegmentRaw(sevSeg, QUOTE);
+	} else if (value == '=') {
+                setSegmentRaw(sevSeg, QUOTE);
 	}
 		
 }
