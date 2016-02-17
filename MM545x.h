@@ -6,19 +6,25 @@
 /**
  * Maximum number of seven segments per chip
  */
-#define MAX_SEGMENTS_PER_MM545X	4
+#define MM545X_MAX_SEVEN_SEGMENTS	8
 
 /**
  * Number of segment per display
  */
-#define SEGMENT_COUNT	8
+#define MM545X_SEVEN_SEGMENT_COUNT	8
+
+struct sevSeg {
+	uint8_t pins[MM545X_SEVEN_SEGMENT_COUNT];
+	uint8_t duplex;
+};
 
 class MM545x {
 private:
 	int clock_pin;
 	int data_pin;
-	uint8_t sevSegPins[MAX_SEGMENTS_PER_MM545X][SEGMENT_COUNT];
-	uint8_t sevSegValue[MAX_SEGMENTS_PER_MM545X];
+	struct sevSeg sev_seg[MM545X_MAX_SEVEN_SEGMENTS];
+	int8_t current_duplex;
+	uint64_t duplex_value[2];
 public:
 	/**
 	 * Initialize a MM545x object
@@ -27,7 +33,7 @@ public:
 	 * @return a MM545x object
 	 */
 	MM545x(int clock_pin, int data_pin);
-	
+
 	/**
 	 * Set the mask for all leds, useful when working with other leds than 7 segments
 	 * @param bits A bitmask of all output (only the first 35 bits are significant)
@@ -41,7 +47,13 @@ public:
 	 * @param pins, pin mapping for the seven segment
 	 * 		Pins are given in the following order: [a, b, c, d ,e , f, g, dp]
 	 */
-	void setupSegment(int sevSeg, uint8_t pins[SEGMENT_COUNT]);
+	void setupSegment(int sevSeg, uint8_t pins[MM545X_SEVEN_SEGMENT_COUNT], uint8_t duplex);
+
+	/**
+	 * Setup seven segment duplexing
+	 * @param duplex_pins Pins for duplexing
+	 */
+	void setupSegmentDuplex(uint8_t duplex_pins[2]);
 	
 	/**
 	 * Set a segment value
@@ -50,6 +62,12 @@ public:
 	 */
 	void setSegment(int sevSeg, char value);
 	
+	/**
+	 * Display a string on the seven segments display
+	 * @param string Seven segment display string
+	 */
+	void print(const char *str);
+
 	/**
 	 * Set a raw value for a segment
 	 * @param sevSeg Seven sigment display index

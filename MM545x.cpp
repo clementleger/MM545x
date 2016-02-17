@@ -5,12 +5,12 @@
 /**
  * Delay between clock transitions
  */
-#define  CLOCK_USEC_DELAY	2
+#define  CLOCK_USEC_DELAY	1
 
 /**
  *  Count of output bits
  */
-#define  OUTPUT_BIT_COUNT		35
+#define  OUTPUT_BIT_COUNT	35
 
 
 uint8_t digitPattern[] = {
@@ -67,17 +67,18 @@ MM545x::MM545x(int clock_pin, int data_pin):
 	data_pin(data_pin)
 {
         int i;
+        current_duplex = -1;
 
 	pinMode(clock_pin, OUTPUT);
         pinMode(data_pin, OUTPUT);
         digitalWrite(clock_pin, LOW);
         digitalWrite(data_pin, LOW);
         
-        for (i = 0; i < MAX_SEGMENTS_PER_MM545X; i++) {
-                memset(sevSegPins[i], 0, SEGMENT_COUNT);
-                sevSegValue[i] = 0;
+        for (i = 0; i < MM545X_MAX_SEVEN_SEGMENTS; i++) {
+                memset(sev_seg[i].pins, 0, MM545X_SEVEN_SEGMENT_COUNT);
         }
-        
+	duplex_value[0] = 0;
+	duplex_value[1] = 0;
 
         /* reset the leds */
         setLeds((uint64_t) 0);
@@ -91,40 +92,39 @@ void MM545x::setLeds(uint64_t leds)
 	/* Send the preamble */
         digitalWrite(data_pin, HIGH);
         digitalWrite(clock_pin, LOW);
-        delayMicroseconds(CLOCK_USEC_DELAY);
+        //~ delayMicroseconds(CLOCK_USEC_DELAY);
         digitalWrite(clock_pin, HIGH);
 
         /* Then output the bits */
         for (i = 0; i < OUTPUT_BIT_COUNT; i++) {
-                delayMicroseconds(CLOCK_USEC_DELAY);
+                //~ delayMicroseconds(CLOCK_USEC_DELAY);
                 if ((leds >> i) & 0x1)
                         digitalWrite(data_pin, HIGH);
                 else
                         digitalWrite(data_pin, LOW);
                 digitalWrite(clock_pin, LOW);
-                delayMicroseconds(2);
+                //~ delayMicroseconds(CLOCK_USEC_DELAY);
                 digitalWrite(clock_pin, HIGH);
         }
 
-        delayMicroseconds(CLOCK_USEC_DELAY);
+        //~ delayMicroseconds(CLOCK_USEC_DELAY);
         digitalWrite(clock_pin, LOW);
 }
 
-void MM545x::setupSegment(int sevSeg, uint8_t pins[SEGMENT_COUNT])
+void MM545x::setupSegment(int sevSeg, uint8_t pins[MM545X_SEVEN_SEGMENT_COUNT], uint8_t duplex)
 {
-        memcpy(sevSegPins[sevSeg], pins, SEGMENT_COUNT);
+        memcpy(sev_seg[sevSeg].pins, pins, MM545X_SEVEN_SEGMENT_COUNT);
+        sev_seg[sevSeg].duplex = duplex;
 }
 
 void MM545x::setSegment(int sevSeg, char value)
 {
-	char val;
-
-        if (value >= '0' && value <= '9') {
-                setSegmentRaw(sevSeg, digitPattern[value - '0']);
-        } else if (value >= 'a' && value <= 'z') {
-                setSegmentRaw(sevSeg, alphaPattern[value - 'a']);
-        } else if (value >= 'A' && value <= 'Z') {
-                setSegmentRaw(sevSeg, alphaPattern[value - 'A']);
+	if (value >= '0' && value <= '9') {
+			setSegmentRaw(sevSeg, digitPattern[value - '0']);
+	} else if (value >= 'a' && value <= 'z') {
+			setSegmentRaw(sevSeg, alphaPattern[value - 'a']);
+	} else if (value >= 'A' && value <= 'Z') {
+			setSegmentRaw(sevSeg, alphaPattern[value - 'A']);
 	} else if (value == ' ') {
                 setSegmentRaw(sevSeg, 0x0);
 	} else if (value == ',' || value == ';' || value == '.') {
@@ -136,28 +136,60 @@ void MM545x::setSegment(int sevSeg, char value)
 	} else if (value == '\'') {
                 setSegmentRaw(sevSeg, QUOTE);
 	} else if (value == '=') {
-                setSegmentRaw(sevSeg, QUOTE);
+                setSegmentRaw(sevSeg, EQUAL);
+	} else {
+                setSegmentRaw(sevSeg, 0x0);
 	}
-		
 }
 
 void MM545x::setSegmentRaw(int sevSeg, uint8_t segMask)
 {
-        sevSegValue[sevSeg] = segMask;
+	struct sevSeg ss = sev_seg[sevSeg];
+	uint8_t seg;
+	uint64_t value = duplex_value[ss.duplex];
+	
+	for (seg = 0; seg < MM545X_SEVEN_SEGMENT_COUNT; seg++) {
+		/* If the bit is set in the value, then set the pin as high */
+		if ((segMask >> seg) & 0x1) {
+			value = (uint64_t) value | (uint64_t) ((uint64_t) 0x1 << ss.pins[seg]);
+		} else {
+			value = ((uint64_t) value & (uint64_t) ~((uint64_t) 0x1 << ss.pins[seg]));
+		}
+	}
+	noInterrupts();
+	duplex_value[ss.duplex] = value;
+	interrupts();
+}
+
+
+void MM545x::setupSegmentDuplex(uint8_t duplex_pins[2])
+{
+	duplex_value[0] = (uint64_t) ((uint64_t)0x1 << (uint64_t) duplex_pins[0]);
+	duplex_value[1] = (uint64_t) ((uint64_t)0x1 << (uint64_t) duplex_pins[1]);
+	current_duplex = 0;
+}
+
+void MM545x::print(const char *str)
+{
+	uint8_t ss = 0;
+
+	while(str[ss] != 0 && ss < MM545X_MAX_SEVEN_SEGMENTS) {
+		this->setSegment(ss++, str[ss]);
+	}
+	while(ss < MM545X_MAX_SEVEN_SEGMENTS)
+		this->setSegmentRaw(ss++, 0);
 }
 
 void MM545x::refreshSegments()
 {
-        uint64_t value = 0;
-        int sevSeg, seg;
-        for (sevSeg = 0; sevSeg < MAX_SEGMENTS_PER_MM545X; sevSeg++) {
-                for (seg = 0; seg < SEGMENT_COUNT; seg++) {
-                        /* If the bit is set in the value, then set the pin as high */
-                        if ((sevSegValue[sevSeg] >> seg) & 0x1) {
-                                value |= ((uint64_t) 0x1 << (uint64_t) sevSegPins[sevSeg][seg]);
-                        }
-                }
-        }
+	uint64_t value;
+
+        if (current_duplex >= 0) {
+		value = duplex_value[current_duplex];
+		current_duplex = (current_duplex == 0 ? 1 : 0);
+	} else {
+		value = duplex_value[0];
+	}
 
         setLeds(value);
 }

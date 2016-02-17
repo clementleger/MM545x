@@ -15,25 +15,32 @@ void setup()
 {
         Serial.begin(115200);
         /* Setup the segments pins */
-        mm.setupSegment(0, sev1);
-        mm.setupSegment(1, sev2);
-        mm.setupSegment(2, sev3);
+        mm.setupSegment(0, sev1, 0);
+        mm.setupSegment(1, sev2, 0);
+        mm.setupSegment(2, sev3, 0);
 }
 
  
 void loop()
 {       
-        int i, j, k;
-
-        for (i = 0; i < 10; i++) {
-                mm.setSegment(2, '0' + i);
-                for (j = 0; j < 10; j++) {
-                        mm.setSegment(1, '0' + j);
-                        for (k = 0; k < 10; k++) {
-                                mm.setSegment(0, '0' + k);
-                                mm.refreshSegments();
-                                delay(50);
-                        }
-                }
-        }
+  mm.setSegmentRaw(0,0b00000001);
+  mm.refreshSegments();
+  delay(200);
+  mm.setSegmentRaw(0,0b00000010);
+  mm.refreshSegments();
+  delay(200);
+  mm.setSegmentRaw(0,0b00000100);
+  mm.refreshSegments();
+  delay(200);
+  mm.setSegmentRaw(0,0b00001000);
+  mm.refreshSegments();
+  delay(200);
+  mm.setSegmentRaw(0,0);
+  mm.setSegmentRaw(1,0b00001000);
+  mm.refreshSegments();
+  delay(200);
+  mm.setSegmentRaw(1,0);
+  mm.setSegmentRaw(2,0b00001000);
+  mm.refreshSegments();
+  delay(200);
 }
